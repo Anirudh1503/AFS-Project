@@ -1,59 +1,106 @@
-import React from "react";
-import ReactDOM from "react-dom/client";
-import { RouterProvider, createBrowserRouter } from "react-router-dom";
-import Home from "./Home";
-import About from "./About";
-import Contact from "./Contact";
-import Post from "./Post";
-import Login from "./Login";
-import Counter from "./Counter";
-import ViewPosts from "./ViewPosts";
-import Registeration from "./Registeration";
-import CreatePost from "./CreatePost";
+const express = require('express');
+const mongoose = require('mongoose');
+const jwt = require('jsonwebtoken');
+const bcrypt = require('bcryptjs');
+const cors = require('cors');
 
-const router = createBrowserRouter([
-  {
-    path: '/',
-    element: <Home></Home>,
-    errorElement: <h1>Page not Found</h1>,
-  },
-  {
-    path: '/about',
-    element: <About></About>,
-  },
-  {
-    path: '/contact',
-    element: <Contact></Contact>,
-  },
-  {
-    path: '/post/:postId',
-    element: <Post></Post>,
-  },
-  {
-    path: '/post',
-    element: <CreatePost></CreatePost>,
-  },
-  {
-    path: '/posts',
-    element: <ViewPosts></ViewPosts>,
-  },
-  {
-    path: '/login',
-    element: <Login></Login>,
-  },
-  {
-    path: '/counter',
-    element: <Counter></Counter>
-  },
-  {
-    path: '/register',
-    element: <Registeration></Registeration>
-  }
-]);
+const app = express();
+app.use(express.json());
+app.use(cors());
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(
-  <React.StrictMode>
-    <RouterProvider router={router}></RouterProvider>
-  </React.StrictMode>
-);
+// MongoDB connection string
+const mongoURI = 'mongodb://localhost:27017/SocialMediaApp';
+mongoose.connect(mongoURI);
+
+// User model
+const UserSchema = new mongoose.Schema({
+    username: String,
+    password: String,
+});
+const User = mongoose.model('User', UserSchema);
+
+// Post model
+const PostSchema = new mongoose.Schema({
+    userId: mongoose.Schema.Types.ObjectId,
+    title: String,
+    content: String,
+});
+const Post = mongoose.model('Post', PostSchema);
+
+// Middleware for token verification
+function verifyToken(req, res, next) {
+    const token = req.headers['authorization'];
+    if (!token) return res.status(403).send('A token is required for authentication');
+    try {
+        req.user = jwt.verify(token.split(' ')[1], 'YOUR_SECRET_KEY');
+        next();
+    }
+    catch (err){
+        return res.status(401).send('Invalid Token');
+    }
+}
+
+// Register user
+app.post('/register', async (req, res) => {
+    try {
+        const hashedPassword = bcrypt.hashSync(req.body.password, 8);
+        const user = new User({
+            username: req.body.username,
+            password: hashedPassword
+        });
+        await user.save();
+        res.status(201).send('User registered successfully');
+    }
+    catch (error){
+        res.status(500).send('Error registering user');
+    }
+});
+
+//Login User
+app.post('/login', async (req, res) => {
+    try {
+        const user = await User.findOne({ username: req.body.username });
+        if (user && bcrypt.compareSync(req.body.password, user.password)) {
+            const token = jwt.sign({ userId: user._id }, 'YOUR_SECRET_KEY');
+            res.json({ token });
+        }
+        else {
+            res.status(401).send('Invalid credentials');
+        }
+    }
+    catch (error){
+        res.status(500).send('Error during login');
+    }
+});
+
+// Create a post
+app.post('/post', verifyToken, async (req, res) => {
+    try {
+        const post = new Post({
+            userId: req.user.userId,
+            title: req.body.title,
+            content: req.body.content
+        });
+        await post.save();
+        res.status(201).send('Post created successfully');
+    }
+    catch (error){
+        res.status(500).send('Error creating post');
+    }
+});
+
+//Get all posts
+app.get('/post', async (req, res) => {
+    try {
+        const posts = await Post.find();
+        res.json(posts);
+    }
+    catch (error) {
+        res.status(500).send('Error fetching posts');
+    }
+});
+
+const port = 3000
+app.listen(port, () => {
+console.log(`Server is running on port ${port}`);
+});
