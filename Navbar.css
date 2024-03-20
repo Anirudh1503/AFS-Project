@@ -1,0 +1,43 @@
+@import url('https://fonts.googleapis.com/css2?family=Sedgwick+Ave&display=swap');
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: white;
+  color: black;
+  padding: 10px 20px 30px;
+}
+
+.right-side ul,
+.left-side ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  align-items: center;
+}
+
+.right-side ul li,
+.left-side ul li {
+  margin-left: 15px;
+}
+
+.right-side ul li a,
+.left-side ul li a {
+  color: black;
+  text-decoration: none;
+}
+
+.left-side {
+  display: flex;
+  align-items: center;
+}
+
+.name {
+  font-family: "Sedgwick Ave", cursive;
+  font-size: 35px;
+  font-weight: 400;
+  color: #2c373f;
+  letter-spacing: 2px;
+}
